@@ -1,0 +1,6 @@
+/var/log/bc-zfsonlinux-memorymanagement2/bc-zfsonlinux_memorymanagement2.log {
+    rotate 5
+    size 500k
+    missingok
+    compress
+}
