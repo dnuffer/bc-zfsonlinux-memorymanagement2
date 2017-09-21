@@ -87,6 +87,11 @@ def format_exception():
     return exception_str
 
 
+def active_pools():
+    global cfg
+    return get_pools() if cfg.pools == [] else cfg.pools
+
+
 def get_pools():
     args = ["zpool", "list", "-H", "-o", "name"]
 
@@ -194,8 +199,7 @@ def restart_crashplan():
 
 
 def set_primarycache(value):
-    global cfg
-    for pool in cfg.pools:
+    for pool in active_pools():
         args = ["zfs", "set", "primarycache=%s" % value, pool]
 
         p = subprocess.Popen(args, stdout=DEVNULL, stderr=subprocess.PIPE)
@@ -288,14 +292,18 @@ def run():
             percent = round(100*used/total, 2)
             
             if percent > cfg.max_panic_percent:
-                print("%2.2f %% exceeds max_panic_percent! dropping cache and setting primarycache=metadata" % (percent))
+                if primarycache == "metadata":
+                    primarycache = "none"
+                else:
+                    primarycache = "metadata"
+
+                print("%2.2f %% exceeds max_panic_percent! dropping cache and setting primarycache=%s" % (percent, primarycache))
                 
                 drop_caches()
-                set_primarycache("metadata")
+                set_primarycache(primarycache)
                 restart_crashplan()
                 # we assume limit_gb is already cfg.min_gb, so we don't set it, and if it's not, then the next loop will set it anyway
                 
-                primarycache = "metadata"
             elif percent > cfg.max_percent:
                 if limit_gb > cfg.min_gb:
                     limit_gb -= 1
